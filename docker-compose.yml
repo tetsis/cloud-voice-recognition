@@ -6,7 +6,6 @@ services:
       - "80:80"
     environment:
       BACKEND: api
-      - ./src/client/dist/:/usr/share/nginx/html/
     depends_on:
       - api
     restart: always
