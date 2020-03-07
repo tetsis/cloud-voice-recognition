@@ -1,3 +1,22 @@
+# Docker image
+## Image build
+```
+docker build -t cvr-proxy -f proxy/Dockerfile .
+docker build -t cvr-api -f api/Dockerfile .
+```
+
+## Tagging
+```
+docker tag cvr-proxy:latest <account_id>.dkr.ecr.ap-northeast-1.amazonaws.com/cvr-proxy:latest
+docker tag cvr-api:latest <account_id>.dkr.ecr.ap-northeast-1.amazonaws.com/cvr-api:latest
+```
+
+## Push to docker repository (ECR)
+```
+docker push <account_id>.dkr.ecr.ap-northeast-1.amazonaws.com/cvr-proxy:latest
+docker push <account_id>.dkr.ecr.ap-northeast-1.amazonaws.com/cvr-api:latest
+```
+
 # Amplify
 
 ## Install Amplify

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-import boto3
 from datetime import datetime
 import time
 import json
+
+import boto3
 
 def upload_object(bucket_name, source_file_name, destination_objcet_name):
     s3 = boto3.resource('s3')

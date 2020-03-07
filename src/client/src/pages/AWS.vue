@@ -32,12 +32,13 @@
     </div>
 
     <!--Card-->
-    <div v-show="status == 'recognize'" class="row">
+    <div v-show="status == 'start' || status == 'recognize'" class="row">
       <div class="col-md-12">
         <card :title="recognitionCard.title" :subTitle="recognitionCard.subTitle">
           <div class="text-center my-2">
             <b-spinner class="align-middle"></b-spinner>
-            <strong>{{ recognize_sentence }}</strong>
+            <p v-show="status == 'start'"><strong>Starting recognition...</strong></p>
+            <p v-show="status == 'recognize'"><strong>Recognizing... This process takes a few minutues.</strong></p>
           </div>
         </card>
       </div>
@@ -95,10 +96,10 @@ export default {
       histories: {},
       getVoiceTextInterval: null,
       transcript: '',
-      recognize_sentence: '  Starting recognition...',
       isBusy: false,
       card: {
         title: "Upload to S3",
+        subTitle: "The file must be in FLAC, MP3, MP4, or WAV file format."
       },
       historyCard: {
         title: "History",
@@ -114,15 +115,46 @@ export default {
       file: null,
       isUpload: false,
       status: 'upload',
+      objectName: '',
+      jobName: '',
     };
   },
   mounted() {
     if (localStorage.getItem('histories')) {
       try {
         this.histories = JSON.parse(localStorage.getItem('histories'));
+        this.myProvider();
       } catch(e) {
         localStorage.removeItem('histories');
       }
+    }
+    if (localStorage.status) {
+      this.status = localStorage.status;
+      if (this.status == 'complete') {
+        this.status = 'upload';
+      } 
+      if (this.status == 'recognize') {
+        this.getVoiceTextInterval = setInterval(() => {
+          this.getVoiceText()
+        }, 5000);
+      }
+    }
+    if (localStorage.objectName) {
+      this.objectName = localStorage.objectName;
+    }
+    if (localStorage.jobName) {
+      this.jobName = localStorage.jobName;
+    }
+  },
+  watch: {
+    status(newStatus) {
+      localStorage.status = newStatus;
+    },
+    objectName(newObjectName) {
+      localStorage.objectName = newObjectName;
+    },
+    jobName(newJobName) {
+      localStorage.jobName = newJobName;
     }
   },
   methods: {
@@ -132,11 +164,12 @@ export default {
     myProvider() {
       let items = []
       for (let [key, value] of Object.entries(this.histories)) {
-        let object_name = key;
+        let objectName = key;
+        let jobName = value['jobName'];
         let status = value['status'];
         let transcript = value['transcript'];
         items.unshift({
-          object_name: object_name,
+          objectName: objectName,
           status: status,
           transcript: transcript
         })
@@ -172,11 +205,11 @@ export default {
           this.file = null;
 
           let data = response.data;
-          this.object_name = data['object_name'];
-          console.log(this.object_name);
+          this.objectName = data['object_name'];
+          console.log(this.objectName);
 
           // localStorageに保存
-          this.histories[this.object_name] = {};
+          this.histories[this.objectName] = {};
           this.saveHistories();
 
           console.log('success');
@@ -192,11 +225,11 @@ export default {
     },
     recognizeVoice() {
       let params = new URLSearchParams();
-      params.append('object_name', this.object_name);
-      this.recognitionCard.subTitle = this.object_name;
-      this.resultCard.subTitle = this.object_name;
+      params.append('object_name', this.objectName);
+      this.recognitionCard.subTitle = this.objectName;
+      this.resultCard.subTitle = this.objectName;
 
-      this.status = 'recognize';
+      this.status = 'start';
 
       axios
         .post('/api/aws/recognize', params)
@@ -204,10 +237,10 @@ export default {
           console.log('success');
 
           let data = response.data;
-          this.job_name = data['job_name'];
+          this.jobName = data['job_name'];
           let status = data['status'];
-          this.histories[this.object_name] = {
-            'job_name': this.job_name,
+          this.histories[this.objectName] = {
+            'job_name': this.jobName,
             'status': status
           };
           this.saveHistories();
@@ -216,11 +249,10 @@ export default {
             this.notifyVue('top', 'right', 'danger', 'Failed to start recognition process')
             this.status = 'upload';
           }
-          console.log(this.job_name);
-
-          this.recognize_sentence = '  Recognizing... This process takes a few minutues. Don\'t reload this page.';
+          console.log(this.jobName);
           this.notifyVue('top', 'right', 'success', 'Start recognition process')
 
+          this.status = 'recognize';
           this.getVoiceTextInterval = setInterval(() => {
             this.getVoiceText()
           }, 5000);
@@ -232,9 +264,10 @@ export default {
         })
     },
     getVoiceText() {
+      this.status = 'recognize';
       let config = {
         params: {
-            job_name: this.job_name
+            job_name: this.jobName
           }
       };
       axios
@@ -246,8 +279,8 @@ export default {
           let status = data['status'];
           this.transcript = data['transcript'];
 
-          this.histories[this.object_name]['status'] = status;
-          this.histories[this.object_name]['status'] = status;
+          this.histories[this.objectName]['status'] = status;
+          this.histories[this.objectName]['status'] = status;
           this.saveHistories();
 
           if (status == 'FAILED') {
@@ -260,7 +293,7 @@ export default {
             console.log('COMPLETED');
             this.status = 'complete';
 
-            this.histories[this.object_name]['transcript'] = this.transcript;
+            this.histories[this.objectName]['transcript'] = this.transcript;
             this.saveHistories();
 
             clearInterval(this.getVoiceTextInterval);
