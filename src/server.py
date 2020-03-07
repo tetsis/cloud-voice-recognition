@@ -28,28 +28,6 @@ class TextHandler(tornado.web.RequestHandler):
         json_response = json.dumps({'message': 'test'}, ensure_ascii=False)
         self.write(json_response)
 
-class UploadHandler(tornado.web.RequestHandler):
-    def set_default_headers(self):
-        self.set_header('Access-Control-Allow-Origin', '*')
-
-    def post(self):
-        file = self.request.files['audio'][0]
-
-        file_name = datetime.now().strftime('%Y%m%d-%H%M%S-') + file.filename
-        file_path = os.path.join('/tmp', file_name)
-        blob_name = file_name
-        output_file = open(file_path, 'wb')
-        output_file.write(file.body)
-
-        # GCSにアップロード
-        upload_blob(bucket_name, file_path, blob_name)
-
-        # Speech APIにかける
-        operation = sample_long_running_recognize('gs://' + bucket_name + '/' + blob_name)
-
-        json_response = json.dumps({'blob_name': blob_name, 'operation': operation}, ensure_ascii=False)
-        self.write(json_response)
-
 class AwsUploadHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
         self.set_header('Access-Control-Allow-Origin', '*')
@@ -82,11 +60,14 @@ class AwsRecognizeHandler(tornado.web.RequestHandler):
             self.set_status(400)
             self.write(json_response)
             return
-        job_name = re.sub(r'[^a-zA-Z0-9._-]', '', object_name)
-        job_name = job_name.replace('.', '_')
+        language_code = 'ja-JP'
+        try:
+            language_code = self.get_body_argument('language')
+        except MissingArgumentError:
+            pass
 
         # Transcribeの処理開始
-        response = aws.start_job(job_name, 'ja-JP', 's3://' + s3_bucket_name + '/' + object_name, s3_bucket_name)
+        response = aws.start_job(job_name, language_code, 's3://' + s3_bucket_name + '/' + object_name, s3_bucket_name)
         status = response['TranscriptionJob']['TranscriptionJobStatus']
 
         json_response = json.dumps({'status': status, 'job_name': job_name}, ensure_ascii=False)
@@ -120,53 +101,6 @@ class AwsTextHandler(tornado.web.RequestHandler):
 
         json_response = json.dumps({'status': status, 'transcript': transcript}, ensure_ascii=False)
         self.write(json_response)
-
-def upload_blob(bucket_name, source_file_name, destination_blob_name):
-    # """Uploads a file to the bucket."""
-    # bucket_name = "your-bucket-name"
-    # source_file_name = "local/path/to/file"
-    # destination_blob_name = "storage-object-name"
-
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(destination_blob_name)
-
-    blob.upload_from_filename(source_file_name)
-
-
-def sample_long_running_recognize(storage_uri):
-    # """
-    # Transcribe long audio file from Cloud Storage using asynchronous speech
-    # recognition
-
-    # Args:
-    #     storage_uri URI for audio file in Cloud Storage, e.g. gs://[BUCKET]/[FILE]
-    # """
-
-    client = speech_v1.SpeechClient()
-
-    # storage_uri = 'gs://cloud-samples-data/speech/brooklyn_bridge.raw'
-
-    # Sample rate in Hertz of the audio data sent
-    sample_rate_hertz = 16000
-
-    # The language of the supplied audio
-    language_code = "ja-JP"
-
-    # Encoding of audio data sent. This sample sets this explicitly.
-    # This field is optional for FLAC and WAV audio formats.
-    encoding = enums.RecognitionConfig.AudioEncoding.FLAC
-
-    config = {
-        "sample_rate_hertz": sample_rate_hertz,
-        "language_code": language_code,
-        "encoding": encoding,
-    }
-    audio = {"uri": storage_uri}
-
-    operation = client.long_running_recognize(config, audio)
-
-    return operation
 
 if __name__ == "__main__":
     bucket_name = os.environ.get('BUCKET_NAME', 'bucket_name')

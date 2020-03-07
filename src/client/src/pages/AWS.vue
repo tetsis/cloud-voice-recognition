@@ -5,15 +5,30 @@
     <div v-show="status == 'upload'" class="row">
       <div class="col-md-12">
         <card :title="card.title" :subTitle="card.subTitle">
-          <div>
-            <!-- Styled -->
-            <b-form-file
-              v-model="file"
-              :state="Boolean(file)"
-              placeholder="Choose a file or drop it here..."
-              drop-placeholder="Drop file here..."
-            ></b-form-file>
-            <div class="mt-3">Selected file: {{ file ? file.name : '' }}</div>
+          <div class="row">
+            <div class="col-md-8">
+              <div>
+                <!-- Styled -->
+                <b-form-file
+                  v-model="file"
+                  :state="Boolean(file)"
+                  placeholder="Choose a file or drop it here..."
+                  drop-placeholder="Drop file here..."
+                ></b-form-file>
+                <div class="mt-3">Selected file: {{ file ? file.name : '' }}</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <b-form-group
+                id="fieldset-horizontal"
+                label-cols-sm="4"
+                label-cols-lg="3"
+                label="Language"
+                label-for="input-horizontal"
+              >
+                <b-form-select v-model="selectedLanguage" :options="optionsLanguage"></b-form-select>
+              </b-form-group>
+            </div>
           </div>
           <div class="text-center">
             <p-button type="info"
@@ -92,7 +107,11 @@ export default {
   },
   data() {
     return {
-      now_num: 0,
+      selectedLanguage: 'ja-JP',
+      optionsLanguage: [
+        { value: 'ja-JP', text: 'ja-JP (Japanese)'},
+        { value: 'en-US', text: 'en-US (English)'},
+      ],
       histories: {},
       getVoiceTextInterval: null,
       transcript: '',
@@ -167,10 +186,12 @@ export default {
         let objectName = key;
         let jobName = value['jobName'];
         let status = value['status'];
+        let language = value['language'];
         let transcript = value['transcript'];
         items.unshift({
           objectName: objectName,
           status: status,
+          language: language,
           transcript: transcript
         })
       }
@@ -226,6 +247,7 @@ export default {
     recognizeVoice() {
       let params = new URLSearchParams();
       params.append('object_name', this.objectName);
+      params.append('language', this.selectedLanguage);
       this.recognitionCard.subTitle = this.objectName;
       this.resultCard.subTitle = this.objectName;
 
@@ -241,7 +263,8 @@ export default {
           let status = data['status'];
           this.histories[this.objectName] = {
             'job_name': this.jobName,
-            'status': status
+            'status': status,
+            'language': this.selectedLanguage,
           };
           this.saveHistories();
           if (status == 'FAILED') {
