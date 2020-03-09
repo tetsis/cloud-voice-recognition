@@ -53,7 +53,7 @@
           <div class="text-center my-2">
             <b-spinner class="align-middle"></b-spinner>
             <p v-show="status == 'start'"><strong>Starting recognition...</strong></p>
-            <p v-show="status == 'recognize'"><strong>Recognizing... This process takes a few minutues.</strong></p>
+            <p v-show="status == 'recognize'"><strong>This process takes a few minutues.</strong></p>
           </div>
         </card>
       </div>
@@ -107,6 +107,7 @@ export default {
   },
   data() {
     return {
+      title: 'Amazon Transcribe',
       selectedLanguage: 'ja-JP',
       optionsLanguage: [
         { value: 'ja-JP', text: 'ja-JP (Japanese)'},
@@ -124,7 +125,7 @@ export default {
         title: "History",
       },
       recognitionCard: {
-        title: "Recognizing",
+        title: "Recognizing at Amazon Transcribe...",
         subTitle: ""
       },
       resultCard: {

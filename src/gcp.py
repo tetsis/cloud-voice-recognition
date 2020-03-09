@@ -106,7 +106,7 @@ def sample_long_running_recognize(storage_uri, sample_rate_hertz, audio_channel_
 
 if __name__ == "__main__":
     gcs_bucket_name = 'nstech-cloudsandbox'
-    file_name = 'aramaki.flac'
+    file_name = '../aramaki.flac'
     encoding_type = file_name[file_name.rfind('.') + 1:].lower()
     if encoding_type not in ['wav', 'flac']:
         sys.exit()
@@ -123,7 +123,7 @@ if __name__ == "__main__":
         info = get_flac_info(file_path)
     print(info)
 
-    #upload_blob(gcs_bucket_name, file_path, object_name)
+    upload_blob(gcs_bucket_name, file_path, object_name)
 
     #storage_uri = 'gs://' + gcs_bucket_name + '/' + object_name
     #sample_rate_hertz = info['framerate']

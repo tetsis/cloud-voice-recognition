@@ -2,8 +2,8 @@
   <div class="wrapper">
     <side-bar>
       <template slot="links">
-        <sidebar-link to="/aws" name="AWS" icon="ti-panel"/>
-        <sidebar-link to="/gcp" name="GCP" icon="ti-panel"/>
+        <sidebar-link to="/aws" name="Amazon Transcribe" icon="ti-panel"/>
+        <sidebar-link to="/gcp" name="Google Speech-to-Text" icon="ti-panel"/>
       </template>
       <mobile-menu>
         <li class="nav-item">

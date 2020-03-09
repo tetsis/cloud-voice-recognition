@@ -52,7 +52,7 @@
         <card :title="recognitionCard.title" :subTitle="recognitionCard.subTitle">
           <div class="text-center my-2">
             <b-spinner class="align-middle"></b-spinner>
-            <p v-show="status == 'recognize'"><strong>Recognizing... This process takes a few minutues. <span class="text-danger">Don't reload this page. </span></strong></p>
+            <p v-show="status == 'recognize'"><strong>This process takes a few minutues. <span class="text-danger">Don't reload this page. </span></strong></p>
           </div>
         </card>
       </div>
@@ -123,7 +123,7 @@ export default {
         title: "History",
       },
       recognitionCard: {
-        title: "Recognizing",
+        title: "Recognizing at Google Speech-to-Text...",
         subTitle: ""
       },
       resultCard: {
@@ -224,8 +224,6 @@ export default {
           this.sampleRateHertz = data['sample_rate_hertz'];
           this.audioChannelCount = data['audio_channel_count'];
           console.log(this.objectName);
-          console.log(this.sampleRateHertz);
-          console.log(this.audioChannelCount);
 
           // localStorageに保存
           this.histories[this.objectName] = {};
