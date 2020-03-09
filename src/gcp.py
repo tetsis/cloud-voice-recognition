@@ -86,13 +86,14 @@ def sample_long_running_recognize(storage_uri, sample_rate_hertz, audio_channel_
         #"sample_rate_hertz": sample_rate_hertz,
         "language_code": language_code,
         "encoding": encoding,
+        "audio_channel_count": int(audio_channel_count),
     }
     audio = {"uri": storage_uri}
 
     try:
         operation = client.long_running_recognize(config, audio)
     except InvalidArgument as e:
-        return e
+        return str(e)
 
     print(u"Waiting for operation to complete...")
     response = operation.result()
@@ -105,8 +106,8 @@ def sample_long_running_recognize(storage_uri, sample_rate_hertz, audio_channel_
     return transcript
 
 if __name__ == "__main__":
-    gcs_bucket_name = 'nstech-cloudsandbox'
-    file_name = '../aramaki.flac'
+    gcs_bucket_name = 'cloud-voice-recognition'
+    file_name = '../radiko5.flac'
     encoding_type = file_name[file_name.rfind('.') + 1:].lower()
     if encoding_type not in ['wav', 'flac']:
         sys.exit()
@@ -117,18 +118,22 @@ if __name__ == "__main__":
     object_name = datetime.now().strftime('%Y%m%d-%H%M%S-') + file_name
 
     info = None
+    sample_rate_hertz = ''
+    audio_channel_count = ''
     if encoding_type == 'wav':
         info = get_wav_info(file_path)
+        sample_rate_hertz = info['framerate']
+        audio_channel_count = info['channels']
     elif encoding_type == 'flac':
         info = get_flac_info(file_path)
+        sample_rate_hertz = info['sample_rate']
+        audio_channel_count = info['channels']
     print(info)
 
     upload_blob(gcs_bucket_name, file_path, object_name)
 
-    #storage_uri = 'gs://' + gcs_bucket_name + '/' + object_name
-    #sample_rate_hertz = info['framerate']
-    #audio_channel_count = info['channels']
-    #language_code = "ja-JP"
+    storage_uri = 'gs://' + gcs_bucket_name + '/' + object_name
+    language_code = "ja-JP"
 
-    #transcript = sample_long_running_recognize(storage_uri, sample_rate_hertz, audio_channel_count, language_code, encoding_type)
-    #print('result: {}'.format(transcript))
+    transcript = sample_long_running_recognize(storage_uri, sample_rate_hertz, audio_channel_count, language_code, encoding_type)
+    print('result: {}'.format(transcript))

@@ -4,3 +4,4 @@ node_modules/
 __pycache__/
 .api_env
 GOOGLE_APPLICATION_CREDENTIALS.json
+.htpasswd
