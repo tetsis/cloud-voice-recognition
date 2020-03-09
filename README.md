@@ -1,5 +1,5 @@
-# Docker image
-## Image build
+# Docker
+## Build image
 ```
 docker build -t tetsis/cloud-voice-recognition-proxy:latest -f proxy/Dockerfile .
 docker build -t tetsis/cloud-voice-recognition-api:latest -f api/Dockerfile .
@@ -16,8 +16,29 @@ docker push tetsis/cloud-voice-recognition-proxy:latest
 docker push tetsis/cloud-voice-recognition-api:latest
 ```
 
+# How to deploy
+## Create enviroment variable files
+Change current directory to `api`, then run follows commands.
+```
+cp .api_env.sample .api_env
+cp GOOGLE_APPLICATION_CREDENTIALS.json.sample GOOGLE_APPLICATION_CREDENTIALS.json
+```
+
+Edit above files for your enviroment.
+
+## Pull Docker images
+```
+docker-compose pull
+```
+
+## Restart process
+```
+docker-compose down
+docker-compose up -d
+```
+
 # Amplify
-## Install Amplify
+## Install
 ```
 npm install -g @aws-amplify/cli
 ```
@@ -27,7 +48,7 @@ npm install -g @aws-amplify/cli
 amplify configure
 ```
 
-## Initialize Amplify
+## Initialize
 Chage directory to project folder, then run this command.
 ```
 amplify init
