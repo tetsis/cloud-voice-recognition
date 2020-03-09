@@ -47,13 +47,12 @@
     </div>
 
     <!--Card-->
-    <div v-show="status == 'start' || status == 'recognize'" class="row">
+    <div v-show="status == 'recognize'" class="row">
       <div class="col-md-12">
         <card :title="recognitionCard.title" :subTitle="recognitionCard.subTitle">
           <div class="text-center my-2">
             <b-spinner class="align-middle"></b-spinner>
-            <p v-show="status == 'start'"><strong>Starting recognition...</strong></p>
-            <p v-show="status == 'recognize'"><strong>Recognizing... This process takes a few minutues.</strong></p>
+            <p v-show="status == 'recognize'"><strong>Recognizing... This process takes a few minutues. <span class="text-danger">Don't reload this page. </span></strong></p>
           </div>
         </card>
       </div>
@@ -84,7 +83,7 @@
           <div>
           <b-table
             ref="historyTable"
-            id="aws-history-table"
+            id="gcp-history-table"
             :busy="isBusy"
             :items="myProvider"
           >
@@ -117,8 +116,8 @@ export default {
       transcript: '',
       isBusy: false,
       card: {
-        title: "Upload to S3",
-        subTitle: "The file must be in FLAC, MP3, MP4, or WAV file format."
+        title: "Upload to GCS",
+        subTitle: "The file must be in FLAC or WAV file format."
       },
       historyCard: {
         title: "History",
@@ -139,41 +138,36 @@ export default {
     };
   },
   mounted() {
-    if (localStorage.getItem('awsHistories')) {
+    if (localStorage.getItem('gcpHistories')) {
       try {
-        this.histories = JSON.parse(localStorage.getItem('awsHistories'));
+        this.histories = JSON.parse(localStorage.getItem('gcpHistories'));
         this.myProvider();
       } catch(e) {
-        localStorage.removeItem('awsHistories');
+        localStorage.removeItem('gcpHistories');
       }
     }
-    if (localStorage.awsStatus) {
-      this.status = localStorage.awsStatus;
+    if (localStorage.gcpStatus) {
+      this.status = localStorage.gcpStatus;
       if (this.status == 'complete') {
         this.status = 'upload';
       } 
-      if (this.status == 'recognize') {
-        this.getVoiceTextInterval = setInterval(() => {
-          this.getVoiceText()
-        }, 5000);
-      }
     }
-    if (localStorage.awsObjectName) {
-      this.objectName = localStorage.awsObjectName;
+    if (localStorage.gcpObjectName) {
+      this.objectName = localStorage.gcpObjectName;
     }
-    if (localStorage.awsJobName) {
-      this.jobName = localStorage.awsJobName;
+    if (localStorage.gcpJobName) {
+      this.jobName = localStorage.gcpJobName;
     }
   },
   watch: {
     status(newStatus) {
-      localStorage.awsStatus = newStatus;
+      localStorage.gcpStatus = newStatus;
     },
     objectName(newObjectName) {
-      localStorage.awsObjectName = newObjectName;
+      localStorage.gcpObjectName = newObjectName;
     },
     jobName(newJobName) {
-      localStorage.awsJobName = newJobName;
+      localStorage.gcpJobName = newJobName;
     }
   },
   methods: {
@@ -199,7 +193,7 @@ export default {
     },
     saveHistories() {
       const parsed = JSON.stringify(this.histories);
-      localStorage.setItem('awsHistories', parsed);
+      localStorage.setItem('gcpHistories', parsed);
       this.$refs.historyTable.refresh()
     },
     notifyVue(verticalAlign, horizontalAlign, type, title) {
@@ -220,14 +214,18 @@ export default {
       formData.append('audio', this.file);
       this.isUpload = true;
       axios
-        .post('/api/aws/upload', formData, config)
+        .post('/api/gcp/upload', formData, config)
         .then(response => {
           this.isUpload = false;
           this.file = null;
 
           let data = response.data;
           this.objectName = data['object_name'];
+          this.sampleRateHertz = data['sample_rate_hertz'];
+          this.audioChannelCount = data['audio_channel_count'];
           console.log(this.objectName);
+          console.log(this.sampleRateHertz);
+          console.log(this.audioChannelCount);
 
           // localStorageに保存
           this.histories[this.objectName] = {};
@@ -242,91 +240,44 @@ export default {
           this.isUpload = false;
           this.file = null;
           console.log('failed');
+          this.notifyVue('top', 'right', 'danger', 'Failed to upload')
         })
     },
     recognizeVoice() {
       let params = new URLSearchParams();
       params.append('object_name', this.objectName);
       params.append('language', this.selectedLanguage);
+      params.append('sample_rate_hertz', this.sampleRateHertz);
+      params.append('audio_channel_count', this.audioChannelCount);
       this.recognitionCard.subTitle = this.objectName;
       this.resultCard.subTitle = this.objectName;
 
-      this.status = 'start';
+      this.status = 'recognize';
+
+      this.histories[this.objectName] = {
+        'status': 'IN_PROGRESS',
+        'language': this.selectedLanguage,
+      };
 
       axios
-        .post('/api/aws/recognize', params)
+        .post('/api/gcp/recognize', params)
         .then(response => {
           console.log('success');
 
           let data = response.data;
-          this.jobName = data['job_name'];
-          let status = data['status'];
-          this.histories[this.objectName] = {
-            'job_name': this.jobName,
-            'status': status,
-            'language': this.selectedLanguage,
-          };
-          this.saveHistories();
-          if (status == 'FAILED') {
-            console.log('Failed to recognize');
-            this.notifyVue('top', 'right', 'danger', 'Failed to start recognition process')
-            this.status = 'upload';
-          }
-          else {
-            console.log(this.jobName);
-            this.notifyVue('top', 'right', 'success', 'Start recognition process')
+          this.transcript = data['transcript'];
 
-            this.status = 'recognize';
-            this.getVoiceTextInterval = setInterval(() => {
-              this.getVoiceText()
-            }, 5000);
-          }
+          this.histories[this.objectName]['status'] = 'COMPLETED';
+          this.histories[this.objectName]['transcript'] = this.transcript;
+          this.saveHistories();
+          this.notifyVue('top', 'right', 'success', 'Recognition completed')
+
+          this.status = 'complete';
         })
         .catch(response => {
           this.status = 'upload';
-          this.notifyVue('top', 'right', 'danger', 'Failed to start recognition process')
+          this.notifyVue('top', 'right', 'danger', 'Failed to recognize')
           console.log('failed');
-        })
-    },
-    getVoiceText() {
-      this.status = 'recognize';
-      let config = {
-        params: {
-            job_name: this.jobName
-          }
-      };
-      axios
-        .get('/api/aws/text', config)
-        .then(response => {
-          console.log('success');
-
-          let data = response.data;
-          let status = data['status'];
-          this.transcript = data['transcript'];
-
-          this.histories[this.objectName]['status'] = status;
-          this.saveHistories();
-
-          if (status == 'FAILED') {
-            console.log('Failed to recognize');
-            this.notifyVue('top', 'right', 'danger', 'Failed to recognize')
-            this.status = 'upload';
-            clearInterval(this.getVoiceTextInterval);
-          }
-          else if (status == 'COMPLETED') {
-            console.log('COMPLETED');
-            this.status = 'complete';
-
-            this.histories[this.objectName]['transcript'] = this.transcript;
-            this.saveHistories();
-
-            clearInterval(this.getVoiceTextInterval);
-            this.notifyVue('top', 'right', 'success', 'Recognition completed')
-          }
-        })
-        .catch(response => {
-          console.log('failed');
-          clearInterval(this.getVoiceTextInterval);
         })
     },
   }

@@ -1,24 +1,22 @@
 # Docker image
 ## Image build
 ```
-docker build -t cvr-proxy -f proxy/Dockerfile .
-docker build -t cvr-api -f api/Dockerfile .
+docker build -t tetsis/cloud-voice-recognition-proxy:latest -f proxy/Dockerfile .
+docker build -t tetsis/cloud-voice-recognition-api:latest -f api/Dockerfile .
 ```
 
-## Tagging
+## Log in Docker Hub
 ```
-docker tag cvr-proxy:latest <account_id>.dkr.ecr.ap-northeast-1.amazonaws.com/cvr-proxy:latest
-docker tag cvr-api:latest <account_id>.dkr.ecr.ap-northeast-1.amazonaws.com/cvr-api:latest
+docker login
 ```
 
-## Push to docker repository (ECR)
+## Push image to Docke Hub
 ```
-docker push <account_id>.dkr.ecr.ap-northeast-1.amazonaws.com/cvr-proxy:latest
-docker push <account_id>.dkr.ecr.ap-northeast-1.amazonaws.com/cvr-api:latest
+docker push tetsis/cloud-voice-recognition-proxy:latest
+docker push tetsis/cloud-voice-recognition-api:latest
 ```
 
 # Amplify
-
 ## Install Amplify
 ```
 npm install -g @aws-amplify/cli

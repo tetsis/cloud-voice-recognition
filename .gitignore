@@ -2,3 +2,5 @@ venv/
 node_modules/
 .vscode/
 __pycache__/
+.api_env
+GOOGLE_APPLICATION_CREDENTIALS.json

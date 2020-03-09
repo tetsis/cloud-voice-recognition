@@ -1,7 +1,7 @@
 version: '3'
 services:
   proxy:
-    image: 961422418814.dkr.ecr.ap-northeast-1.amazonaws.com/cvr-proxy
+    image: tetsis/cloud-voice-recognition-proxy
     ports:
       - "80:80"
     environment:
@@ -10,7 +10,9 @@ services:
       - api
     restart: always
   api:
-    image: 961422418814.dkr.ecr.ap-northeast-1.amazonaws.com/cvr-api
+    image: tetsis/cloud-voice-recognition-api
     env_file: ./api/.api_env
     command: 'python src/server.py'
+    volumes:
+      - ./api/GOOGLE_APPLICATION_CREDENTIALS.json:/usr/src/api/credentials/GOOGLE_APPLICATION_CREDENTIALS.json
     restart: always

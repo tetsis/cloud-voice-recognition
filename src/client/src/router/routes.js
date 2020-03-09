@@ -3,7 +3,10 @@ import DashboardLayout from "@/layout/dashboard/DashboardLayout.vue";
 import NotFound from "@/pages/NotFoundPage.vue";
 
 // Admin pages
+
+// Content pages
 import AWS from "@/pages/AWS.vue";
+import GCP from "@/pages/GCP.vue";
 
 const routes = [
   {
@@ -15,6 +18,11 @@ const routes = [
         path: "aws",
         name: "aws",
         component: AWS
+      },
+      {
+        path: "gcp",
+        name: "gcp",
+        component: GCP
       }
     ]
   },

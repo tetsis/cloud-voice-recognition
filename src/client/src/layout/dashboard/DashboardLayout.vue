@@ -3,6 +3,7 @@
     <side-bar>
       <template slot="links">
         <sidebar-link to="/aws" name="AWS" icon="ti-panel"/>
+        <sidebar-link to="/gcp" name="GCP" icon="ti-panel"/>
       </template>
       <mobile-menu>
         <li class="nav-item">

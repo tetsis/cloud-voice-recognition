@@ -4,7 +4,7 @@
       <nav>
         <ul>
           <li>
-            <a href="https://github.com/tetsis/cloud-voice-recognition" target="_blank">Source code</a>
+            <a href="https://github.com/tetsis/cloud-voice-recognition" target="_blank">Source code (GitHub <i class="ti-github"></i>)</a>
           </li>
         </ul>
       </nav>
