@@ -107,7 +107,7 @@ def sample_long_running_recognize(storage_uri, sample_rate_hertz, audio_channel_
 
 if __name__ == "__main__":
     gcs_bucket_name = 'cloud-voice-recognition'
-    file_name = '../radiko5.flac'
+    file_name = '../../radiko5.flac'
     encoding_type = file_name[file_name.rfind('.') + 1:].lower()
     if encoding_type not in ['wav', 'flac']:
         sys.exit()

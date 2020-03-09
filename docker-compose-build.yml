@@ -20,6 +20,6 @@ services:
     env_file: ./api/.api_env
     command: 'python src/server.py'
     volumes:
-      - ./src:/usr/src/api/src
+      - ./src/server:/usr/src/api/src
       - ./api/GOOGLE_APPLICATION_CREDENTIALS.json:/usr/src/api/credentials/GOOGLE_APPLICATION_CREDENTIALS.json
     restart: always
