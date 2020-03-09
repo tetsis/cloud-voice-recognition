@@ -6,6 +6,7 @@ import os
 import sys
 import wave
 from mutagen.flac import FLAC
+import requests
 
 from google.cloud import storage
 from google.cloud import speech_v1
@@ -95,25 +96,52 @@ def sample_long_running_recognize(storage_uri, sample_rate_hertz, audio_channel_
     except InvalidArgument as e:
         return str(e)
 
-    print(u"Waiting for operation to complete...")
-    response = operation.result()
+    operation_name = operation.operation.name
+    print('operation_name: {}'.format(operation_name))
+    return operation_name
+
+def check_operation(operation_name, gcp_api_key):
+    url = 'https://speech.googleapis.com/v1/operations/' + operation_name + '?key=' + gcp_api_key
+    headers = {
+        'accept': 'application/json',
+        'content-type': 'application/json'
+    }
+
+    r = requests.get(url, headers=headers)
+    response = json.loads(r.text)
+
+    if 'done' in response:
+        if response['done']:
+            return True
+    return False
+
+def get_transcript(operation_name, gcp_api_key):
+    url = 'https://speech.googleapis.com/v1/operations/' + operation_name + '?key=' + gcp_api_key
+    headers = {
+        'accept': 'application/json',
+        'content-type': 'application/json'
+    }
+
+    r = requests.get(url, headers=headers)
+    response = json.loads(r.text)
 
     transcript = ''
-    for result in response.results:
-        for alternative in result.alternatives:
-            transcript += alternative.transcript + '\n'
-    
+    for result in response['response']['results']:
+        for alternative in result['alternatives']:
+            transcript += alternative['transcript'] + '\n'
+
     return transcript
 
 if __name__ == "__main__":
     gcs_bucket_name = 'cloud-voice-recognition'
-    file_name = '../../radiko5.flac'
+    file_name = 'radiko5.flac'
+    gcp_api_key = os.environ['GCP_API_KEY']
     encoding_type = file_name[file_name.rfind('.') + 1:].lower()
     if encoding_type not in ['wav', 'flac']:
         sys.exit()
 
-    file_path = os.path.join(os.path.dirname(__file__), file_name)
-    credential_path = os.path.join(os.path.dirname(__file__), '../api/GOOGLE_APPLICATION_CREDENTIALS.json')
+    file_path = os.path.join(os.path.dirname(__file__), '../../' + file_name)
+    credential_path = os.path.join(os.path.dirname(__file__), '../../api/GOOGLE_APPLICATION_CREDENTIALS.json')
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credential_path
     object_name = datetime.now().strftime('%Y%m%d-%H%M%S-') + file_name
 
@@ -135,5 +163,10 @@ if __name__ == "__main__":
     storage_uri = 'gs://' + gcs_bucket_name + '/' + object_name
     language_code = "ja-JP"
 
-    transcript = sample_long_running_recognize(storage_uri, sample_rate_hertz, audio_channel_count, language_code, encoding_type)
-    print('result: {}'.format(transcript))
+    operation_name = sample_long_running_recognize(storage_uri, sample_rate_hertz, audio_channel_count, language_code, encoding_type)
+
+    while not check_operation(operation_name):
+        time.sleep(1)
+    
+    transcript = get_transcript(operation_name)
+    print(transcript)

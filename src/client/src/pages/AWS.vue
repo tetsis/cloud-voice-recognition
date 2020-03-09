@@ -254,6 +254,11 @@ export default {
 
       this.status = 'start';
 
+      this.histories[this.objectName] = {
+        'status': 'IN_PROGRESS',
+        'language': this.selectedLanguage,
+      };
+
       axios
         .post('/api/aws/recognize', params)
         .then(response => {
@@ -263,7 +268,7 @@ export default {
           this.jobName = data['job_name'];
           let status = data['status'];
           this.histories[this.objectName] = {
-            'job_name': this.jobName,
+            'jobName': this.jobName,
             'status': status,
             'language': this.selectedLanguage,
           };
@@ -326,6 +331,7 @@ export default {
           }
         })
         .catch(response => {
+          this.status = 'upload';
           console.log('failed');
           clearInterval(this.getVoiceTextInterval);
         })

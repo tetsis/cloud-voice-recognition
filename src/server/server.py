@@ -198,16 +198,37 @@ class GcpRecognizeHandler(tornado.web.RequestHandler):
 
         # Cloud Speech-to-Text実行
         storage_uri = 'gs://' + gcs_bucket_name + '/' + object_name
-        transcript = gcp.sample_long_running_recognize(storage_uri, sample_rate_hertz, audio_channel_count, language_code, encoding_type)
+        operation_name = gcp.sample_long_running_recognize(storage_uri, sample_rate_hertz, audio_channel_count, language_code, encoding_type)
 
-        json_response = json.dumps({'transcript': transcript}, ensure_ascii=False)
+        json_response = json.dumps({'operation_name': operation_name}, ensure_ascii=False)
         self.write(json_response)
 
+class GcpTextHandler(tornado.web.RequestHandler):
+    def set_default_headers(self):
+        self.set_header('Access-Control-Allow-Origin', '*')
+
+    def get(self):
+        operation_name = ''
+        try:
+            operation_name = self.get_query_argument('operation_name')
+        except MissingArgumentError:
+            json_response = json.dumps({'message': 'Not enough argument \'operation_name\''}, ensure_ascii=False)
+            self.set_status(400)
+            self.write(json_response)
+            return
+        
+        done = gcp.check_operation(operation_name, gcp_api_key)
+        transcript = ''
+        if done:
+            transcript = gcp.get_transcript(operation_name, gcp_api_key)
+        
+        json_response = json.dumps({'done': done, 'transcript': transcript}, ensure_ascii=False)
+        self.write(json_response)
 
 if __name__ == "__main__":
     gcs_bucket_name = os.environ.get('GCS_BUCKET_NAME', 'gcs_bucket_name')
     s3_bucket_name = os.environ.get('S3_BUCKET_NAME', 's3_bucket_name')
-    api_key = os.environ.get('API_KEY', 'api_key')
+    gcp_api_key = os.environ.get('GCP_API_KEY', 'gcp_api_key')
     credential_path = os.path.join(os.path.dirname(__file__), '../credentials/GOOGLE_APPLICATION_CREDENTIALS.json')
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credential_path
 
@@ -219,6 +240,7 @@ if __name__ == "__main__":
             url(r"/api/aws/text", AwsTextHandler, name='aws_text'),
             url(r"/api/gcp/upload", GcpUploadHandler, name='gcp_upload'),
             url(r"/api/gcp/recognize", GcpRecognizeHandler, name='gcp_recognize'),
+            url(r"/api/gcp/text", GcpTextHandler, name='gcp_text'),
         ],
     )
     server = tornado.httpserver.HTTPServer(application)

@@ -47,12 +47,13 @@
     </div>
 
     <!--Card-->
-    <div v-show="status == 'recognize'" class="row">
+    <div v-show="status == 'start' || status == 'recognize'" class="row">
       <div class="col-md-12">
         <card :title="recognitionCard.title" :subTitle="recognitionCard.subTitle">
           <div class="text-center my-2">
             <b-spinner class="align-middle"></b-spinner>
-            <p v-show="status == 'recognize'"><strong>This process takes a few minutues. <span class="text-danger">Don't reload this page. </span></strong></p>
+            <p v-show="status == 'start'"><strong>Starting recognition...</strong></p>
+            <p v-show="status == 'recognize'"><strong>This process takes a few minutues.</strong></p>
           </div>
         </card>
       </div>
@@ -134,7 +135,7 @@ export default {
       isUpload: false,
       status: 'upload',
       objectName: '',
-      jobName: '',
+      operationName: '',
     };
   },
   mounted() {
@@ -151,12 +152,17 @@ export default {
       if (this.status == 'complete') {
         this.status = 'upload';
       } 
+      if (this.status == 'recognize') {
+        this.getVoiceTextInterval = setInterval(() => {
+          this.getVoiceText()
+        }, 5000);
+      }
     }
     if (localStorage.gcpObjectName) {
       this.objectName = localStorage.gcpObjectName;
     }
-    if (localStorage.gcpJobName) {
-      this.jobName = localStorage.gcpJobName;
+    if (localStorage.gcpOperationName) {
+      this.operationName = localStorage.gcpOperationName;
     }
   },
   watch: {
@@ -166,8 +172,8 @@ export default {
     objectName(newObjectName) {
       localStorage.gcpObjectName = newObjectName;
     },
-    jobName(newJobName) {
-      localStorage.gcpJobName = newJobName;
+    operationName(newOperationName) {
+      localStorage.gcpOperationName = newOperationName;
     }
   },
   methods: {
@@ -178,13 +184,13 @@ export default {
       let items = []
       for (let [key, value] of Object.entries(this.histories)) {
         let objectName = key;
-        let jobName = value['jobName'];
-        let status = value['status'];
+        let operationName = value['operationName'];
+        let done = value['done'];
         let language = value['language'];
         let transcript = value['transcript'];
         items.unshift({
           objectName: objectName,
-          status: status,
+          done: done,
           language: language,
           transcript: transcript
         })
@@ -250,10 +256,10 @@ export default {
       this.recognitionCard.subTitle = this.objectName;
       this.resultCard.subTitle = this.objectName;
 
-      this.status = 'recognize';
+      this.status = 'start';
 
       this.histories[this.objectName] = {
-        'status': 'IN_PROGRESS',
+        'done': false,
         'language': this.selectedLanguage,
       };
 
@@ -263,19 +269,62 @@ export default {
           console.log('success');
 
           let data = response.data;
-          this.transcript = data['transcript'];
-
-          this.histories[this.objectName]['status'] = 'COMPLETED';
-          this.histories[this.objectName]['transcript'] = this.transcript;
+          this.operationName = data['operation_name'];
+          this.histories[this.objectName]['operationName'] = this.operationName;
           this.saveHistories();
-          this.notifyVue('top', 'right', 'success', 'Recognition completed')
 
-          this.status = 'complete';
+          console.log(this.operationName);
+          this.notifyVue('top', 'right', 'success', 'Start recognition process')
+
+          this.status = 'recognize';
+          this.getVoiceTextInterval = setInterval(() => {
+            this.getVoiceText()
+          }, 5000);
         })
         .catch(response => {
           this.status = 'upload';
-          this.notifyVue('top', 'right', 'danger', 'Failed to recognize')
+          this.notifyVue('top', 'right', 'danger', 'Failed to start recognition process')
           console.log('failed');
+        })
+    },
+    getVoiceText() {
+      this.status = 'recognize';
+      let config = {
+        params: {
+            operation_name: this.operationName
+          }
+      };
+      axios
+        .get('/api/gcp/text', config)
+        .then(response => {
+          console.log('success');
+
+          let data = response.data;
+          let done = data['done'];
+          console.log(done);
+
+          this.histories[this.objectName]['done'] = done;
+          this.saveHistories();
+
+          console.log('kita');
+          if (done == true) {
+            console.log('COMPLETED');
+
+            this.transcript = data['transcript'];
+            console.log(this.transcript);
+
+            this.histories[this.objectName]['transcript'] = this.transcript;
+            this.saveHistories();
+
+            clearInterval(this.getVoiceTextInterval);
+            this.notifyVue('top', 'right', 'success', 'Recognition completed')
+            this.status = 'complete';
+          }
+        })
+        .catch(response => {
+          this.status = 'upload';
+          console.log('failed');
+          clearInterval(this.getVoiceTextInterval);
         })
     },
   }
