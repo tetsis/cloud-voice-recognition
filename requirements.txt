@@ -2,6 +2,7 @@ tornado
 boto3
 google-cloud-storage
 google-cloud-speech
+azure-storage-blob
 Wave
 mutagen
 requests

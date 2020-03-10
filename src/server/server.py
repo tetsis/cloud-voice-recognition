@@ -11,6 +11,7 @@ import re
 
 import aws
 import gcp
+import azure_speech
 
 class TextHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
@@ -225,12 +226,116 @@ class GcpTextHandler(tornado.web.RequestHandler):
         json_response = json.dumps({'done': done, 'transcript': transcript}, ensure_ascii=False)
         self.write(json_response)
 
+class AzureUploadHandler(tornado.web.RequestHandler):
+    def set_default_headers(self):
+        self.set_header('Access-Control-Allow-Origin', '*')
+
+    def post(self):
+        file = self.request.files['audio'][0]
+
+        file_name = file.filename
+        file_name = datetime.now().strftime('%Y%m%d-%H%M%S-') + file_name
+        file_path = os.path.join('/tmp', file_name)
+        output_file = open(file_path, 'wb')
+        output_file.write(file.body)
+
+        # ファイル形式取得
+        encoding_type = file_name[file_name.rfind('.') + 1:].lower()
+        if encoding_type not in ['wav']:
+            json_response = json.dumps({'message': 'Unsupported file format'}, ensure_ascii=False)
+            self.set_status(400)
+            self.write(json_response)
+            return
+
+        # コンテナにアップロード
+        azure_speech.upload_blob(azure_connection_string, azure_container_name, file_path, file_name)
+
+        json_response = json.dumps(
+            {
+                'object_name': file_name,
+            },
+            ensure_ascii=False)
+        self.write(json_response)
+
+class AzureRecognizeHandler(tornado.web.RequestHandler):
+    def set_default_headers(self):
+        self.set_header('Access-Control-Allow-Origin', '*')
+
+    def post(self):
+        object_name = ''
+        try:
+            object_name = self.get_body_argument('object_name')
+        except MissingArgumentError:
+            json_response = json.dumps({'message': 'Not enough argument \'object_name\''}, ensure_ascii=False)
+            self.set_status(400)
+            self.write(json_response)
+            return
+
+        locale = 'ja-JP'
+        try:
+            locale = self.get_body_argument('language')
+        except MissingArgumentError:
+            pass
+
+        # ファイル形式取得
+        encoding_type = object_name[object_name.rfind('.') + 1:].lower()
+        if encoding_type not in ['wav']:
+            json_response = json.dumps({'message': 'Unsupported file format'}, ensure_ascii=False)
+            self.set_status(400)
+            self.write(json_response)
+            return
+
+        # Speeche Service実行
+        transcription_name = re.sub(r'[^a-zA-Z0-9._-]', '', object_name)
+        transcription_name = transcription_name.replace('.', '_')
+
+        sas_token = azure_speech.get_sas_token(connection_string)
+        azure_speech.start_transcription(azure_storage_account, azure_container_name, object_name, transcription_name, azure_subscription_key, sas_token)
+
+        json_response = json.dumps({'transcription_name': transcription_name}, ensure_ascii=False)
+        self.write(json_response)
+
+class AzureTextHandler(tornado.web.RequestHandler):
+    def set_default_headers(self):
+        self.set_header('Access-Control-Allow-Origin', '*')
+
+    def get(self):
+        transcription_name = ''
+        try:
+            transcription_name = self.get_query_argument('transcription_name')
+        except MissingArgumentError:
+            json_response = json.dumps({'message': 'Not enough argument \'transcription_name\''}, ensure_ascii=False)
+            self.set_status(400)
+            self.write(json_response)
+            return
+        
+        status = azure_speech.get_transcription_status(transcription_name, azure_subscription_key)
+        transcript = ''
+        if status == 'Succeeded':
+            result_url = azure_speech.get_transcription_result_url(transcription_name, azure_subscription_key)
+            download_file_name = result_url[result_url.rfind('/') + 1:]
+            azure_speech.download_blob(azure_connection_string, azure_container_name, download_file_name, download_file_name)
+            transcript = azure_speech.get_transcript_from_file(download_file_name)
+        
+        json_response = json.dumps({'status': staus, 'transcript': transcript}, ensure_ascii=False)
+        self.write(json_response)
+
 if __name__ == "__main__":
-    gcs_bucket_name = os.environ.get('GCS_BUCKET_NAME', 'gcs_bucket_name')
+    # AWS
     s3_bucket_name = os.environ.get('S3_BUCKET_NAME', 's3_bucket_name')
+
+    # GCP
+    gcs_bucket_name = os.environ.get('GCS_BUCKET_NAME', 'gcs_bucket_name')
     gcp_api_key = os.environ.get('GCP_API_KEY', 'gcp_api_key')
     credential_path = os.path.join(os.path.dirname(__file__), '../credentials/GOOGLE_APPLICATION_CREDENTIALS.json')
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credential_path
+
+    # Azure
+    azure_storage_account = os.environ['AZURE_STORAGE_ACCOUNT']
+    azure_connection_string = os.environ['AZURE_STORAGE_CONNECTION_STRING']
+    azure_container_name = os.environ['AZURE_STORAGE_CONTAINER_NAME']
+    azure_subscription_key = os.environ['AZURE_SUBSCRIPTION_KEY']
+    azure_service_sas_url = os.environ['AZURE_SERVICE_SAS_URL']
 
     application = tornado.web.Application(
         [
@@ -241,6 +346,9 @@ if __name__ == "__main__":
             url(r"/api/gcp/upload", GcpUploadHandler, name='gcp_upload'),
             url(r"/api/gcp/recognize", GcpRecognizeHandler, name='gcp_recognize'),
             url(r"/api/gcp/text", GcpTextHandler, name='gcp_text'),
+            url(r"/api/azure/upload", AzureUploadHandler, name='azure_upload'),
+            url(r"/api/azure/recognize", AzureRecognizeHandler, name='azure_recognize'),
+            url(r"/api/azure/text", AzureTextHandler, name='azure_text'),
         ],
     )
     server = tornado.httpserver.HTTPServer(application)

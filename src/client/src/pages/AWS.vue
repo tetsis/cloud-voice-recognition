@@ -119,7 +119,7 @@ export default {
       isBusy: false,
       card: {
         title: "Upload to S3",
-        subTitle: "The file must be in FLAC, MP3, MP4, or WAV file format."
+        subTitle: "The file must be in FLAC, MP3, MP4 or WAV file format."
       },
       historyCard: {
         title: "History",
