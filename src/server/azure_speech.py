@@ -40,7 +40,7 @@ def get_sas_token(connection_string):
     print(sas_token)
     return sas_token
 
-def start_transcription(storage_account, container_name, object_name, transcription_name, locale, subscription_key, sas_token):
+def start_transcription(storage_account, container_name, object_name, transcription_name, locale, subscription_key, sas_token, service_sas_url):
     container_url = 'https://' + storage_account + '.blob.core.windows.net/' + container_name
 
     url = 'https://japaneast.cris.ai/api/speechtotext/v2.0/transcriptions'

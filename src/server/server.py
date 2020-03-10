@@ -289,8 +289,8 @@ class AzureRecognizeHandler(tornado.web.RequestHandler):
         transcription_name = re.sub(r'[^a-zA-Z0-9._-]', '', object_name)
         transcription_name = transcription_name.replace('.', '_')
 
-        sas_token = azure_speech.get_sas_token(connection_string)
-        azure_speech.start_transcription(azure_storage_account, azure_container_name, object_name, transcription_name, azure_subscription_key, sas_token)
+        sas_token = azure_speech.get_sas_token(azure_connection_string)
+        azure_speech.start_transcription(azure_storage_account, azure_container_name, object_name, transcription_name, locale, azure_subscription_key, sas_token, azure_service_sas_url)
 
         json_response = json.dumps({'transcription_name': transcription_name}, ensure_ascii=False)
         self.write(json_response)
@@ -317,7 +317,7 @@ class AzureTextHandler(tornado.web.RequestHandler):
             azure_speech.download_blob(azure_connection_string, azure_container_name, download_file_name, download_file_name)
             transcript = azure_speech.get_transcript_from_file(download_file_name)
         
-        json_response = json.dumps({'status': staus, 'transcript': transcript}, ensure_ascii=False)
+        json_response = json.dumps({'status': status, 'transcript': transcript}, ensure_ascii=False)
         self.write(json_response)
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@
       <template slot="links">
         <sidebar-link to="/aws" name="Amazon Transcribe" icon="ti-panel"/>
         <sidebar-link to="/gcp" name="Google Speech-to-Text" icon="ti-panel"/>
+        <sidebar-link to="/azure" name="Azure Speech Service" icon="ti-panel"/>
       </template>
       <mobile-menu>
         <li class="nav-item">

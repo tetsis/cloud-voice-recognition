@@ -7,6 +7,7 @@ import NotFound from "@/pages/NotFoundPage.vue";
 // Content pages
 import AWS from "@/pages/AWS.vue";
 import GCP from "@/pages/GCP.vue";
+import Azure from "@/pages/Azure.vue";
 
 const routes = [
   {
@@ -23,6 +24,11 @@ const routes = [
         path: "gcp",
         name: "gcp",
         component: GCP
+      },
+      {
+        path: "azure",
+        name: "azure",
+        component: Azure
       }
     ]
   },
