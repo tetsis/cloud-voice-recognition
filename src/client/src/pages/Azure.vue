@@ -118,7 +118,7 @@ export default {
       isBusy: false,
       card: {
         title: "Upload to Blob Storage",
-        subTitle: "The file must be in WAV file format."
+        subTitle: "The file must be in WAV or MP3 file format. MP3 file is converted to WAV automatically."
       },
       historyCard: {
         title: "History",
@@ -305,7 +305,6 @@ export default {
           this.histories[this.objectName]['status'] = status;
           this.saveHistories();
 
-          console.log('kita');
           if (status == 'Succeeded') {
             console.log('COMPLETED');
 

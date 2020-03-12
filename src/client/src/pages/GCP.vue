@@ -118,7 +118,7 @@ export default {
       isBusy: false,
       card: {
         title: "Upload to GCS",
-        subTitle: "The file must be in FLAC or WAV file format."
+        subTitle: "The file must be in FLAC, WAV or MP3 file format. MP3 file is converted to WAV automatically."
       },
       historyCard: {
         title: "History",

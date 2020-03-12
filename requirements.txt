@@ -6,3 +6,4 @@ azure-storage-blob
 Wave
 mutagen
 requests
+pydub

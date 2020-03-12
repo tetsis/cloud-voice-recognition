@@ -13,6 +13,8 @@ from google.cloud import speech_v1
 from google.cloud.speech_v1 import enums
 from google.api_core.exceptions import InvalidArgument
 
+import lib
+
 def get_wav_info(file_name):
     wv = wave.open(file_name, 'rb')
 
@@ -126,21 +128,33 @@ def get_transcript(operation_name, gcp_api_key):
     response = json.loads(r.text)
 
     transcript = ''
-    for result in response['response']['results']:
-        for alternative in result['alternatives']:
-            transcript += alternative['transcript'] + '\n'
+    if 'results' in response['response']:
+        for result in response['response']['results']:
+            for alternative in result['alternatives']:
+                transcript += alternative['transcript'] + '\n'
 
     return transcript
 
 if __name__ == "__main__":
     gcs_bucket_name = 'cloud-voice-recognition'
-    file_name = 'radiko5.flac'
+    file_name = 'ニュース.mp3'
     gcp_api_key = os.environ['GCP_API_KEY']
     encoding_type = file_name[file_name.rfind('.') + 1:].lower()
-    if encoding_type not in ['wav', 'flac']:
+    if encoding_type not in ['wav', 'flac', 'mp3']:
         sys.exit()
 
-    file_path = os.path.join(os.path.dirname(__file__), '../../' + file_name)
+    # mp3の場合はwavに変換
+    if encoding_type == 'mp3':
+        file_path = file_name
+        new_file_path = lib.convert_to_wav_from_mp3(file_path)
+        if new_file_path:
+            file_path = new_file_path
+            file_name = file_path[file_path.rfind('/') + 1:]
+            encoding_type = 'wav'
+        else:
+            sys.exit()
+
+    file_path = os.path.join(os.path.dirname(__file__), file_name)
     credential_path = os.path.join(os.path.dirname(__file__), '../../api/GOOGLE_APPLICATION_CREDENTIALS.json')
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credential_path
     object_name = datetime.now().strftime('%Y%m%d-%H%M%S-') + file_name
@@ -165,8 +179,8 @@ if __name__ == "__main__":
 
     operation_name = sample_long_running_recognize(storage_uri, sample_rate_hertz, audio_channel_count, language_code, encoding_type)
 
-    while not check_operation(operation_name):
+    while not check_operation(operation_name, gcp_api_key):
         time.sleep(1)
     
-    transcript = get_transcript(operation_name)
+    transcript = get_transcript(operation_name, gcp_api_key)
     print(transcript)

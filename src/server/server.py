@@ -12,6 +12,7 @@ import re
 import aws
 import gcp
 import azure_speech
+import lib
 
 class TextHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
@@ -121,11 +122,24 @@ class GcpUploadHandler(tornado.web.RequestHandler):
 
         # ファイル形式取得
         encoding_type = file_name[file_name.rfind('.') + 1:].lower()
-        if encoding_type not in ['wav', 'flac']:
+        if encoding_type not in ['wav', 'flac', 'mp3']:
             json_response = json.dumps({'message': 'Unsupported file format'}, ensure_ascii=False)
             self.set_status(400)
             self.write(json_response)
             return
+        
+        # mp3の場合はwavに変換
+        if encoding_type == 'mp3':
+            new_file_path = lib.convert_to_wav_from_mp3(file_path)
+            if new_file_path:
+                file_path = new_file_path
+                file_name = file_path[file_path.rfind('/') + 1:]
+                encoding_type = 'wav'
+            else:
+                json_response = json.dumps({'message': 'Cannot convert mp3 file'}, ensure_ascii=False)
+                self.set_status(400)
+                self.write(json_response)
+                return
 
         info = None
         sample_rate_hertz = None
@@ -241,11 +255,25 @@ class AzureUploadHandler(tornado.web.RequestHandler):
 
         # ファイル形式取得
         encoding_type = file_name[file_name.rfind('.') + 1:].lower()
-        if encoding_type not in ['wav']:
+        if encoding_type not in ['wav', 'mp3']:
             json_response = json.dumps({'message': 'Unsupported file format'}, ensure_ascii=False)
             self.set_status(400)
             self.write(json_response)
             return
+
+        # mp3の場合はwavに変換
+        if encoding_type == 'mp3':
+            new_file_path = lib.convert_to_wav_from_mp3(file_path)
+            if new_file_path:
+                file_path = new_file_path
+                file_name = file_path[file_path.rfind('/') + 1:]
+                encoding_type = 'wav'
+            else:
+                json_response = json.dumps({'message': 'Cannot convert mp3 file'}, ensure_ascii=False)
+                self.set_status(400)
+                self.write(json_response)
+                return
+
 
         # コンテナにアップロード
         azure_speech.upload_blob(azure_connection_string, azure_container_name, file_path, file_name)
