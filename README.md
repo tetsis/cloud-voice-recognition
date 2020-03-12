@@ -23,7 +23,12 @@ Change current directory to `api`, then run follows commands.
 cp .api_env.sample .api_env
 cp GOOGLE_APPLICATION_CREDENTIALS.json.sample GOOGLE_APPLICATION_CREDENTIALS.json
 ```
+Edit above files for your enviroment.
 
+Change current directory to `proxy`, then run follows commands.
+```
+cp .htpasswd.sample .htpasswd
+```
 Edit above files for your enviroment.
 
 ## Pull Docker images

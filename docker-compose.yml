@@ -6,6 +6,8 @@ services:
       - "80:80"
     environment:
       BACKEND: api
+    volumes:
+      - ./proxy/.htpasswd:/etc/nginx/.htpasswd
     depends_on:
       - api
     restart: always
