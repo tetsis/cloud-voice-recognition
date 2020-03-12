@@ -9,6 +9,7 @@ services:
     environment:
       BACKEND: api
     volumes:
+      - ./proxy/.htpasswd:/etc/nginx/.htpasswd
       - ./src/client/dist/:/usr/share/nginx/html/
     depends_on:
       - api
