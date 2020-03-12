@@ -7,7 +7,7 @@ import requests
 import time
 
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
-from azure.storage.blob import ResourceTypes, AccountSasPermissions, generate_account_sas
+from azure.storage.blob import ResourceTypes, AccountSasPermissions, ContainerSasPermissions, generate_account_sas, generate_container_sas
 
 
 def upload_blob(connection_string, container_name, local_file_name, blob_name):
@@ -40,7 +40,19 @@ def get_sas_token(connection_string):
     print(sas_token)
     return sas_token
 
-def start_transcription(storage_account, container_name, object_name, transcription_name, locale, subscription_key, sas_token, service_sas_url):
+def get_service_sas_token(connection_string, storage_account, container_name):
+    blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+    service_sas_token = generate_container_sas(
+        storage_account,
+        container_name,
+        account_key=blob_service_client.credential.account_key,
+        permission=ContainerSasPermissions(read=True, write=True),
+        expiry=datetime.utcnow() + timedelta(hours=1),
+    )
+    print(service_sas_token)
+    return service_sas_token
+
+def start_transcription(storage_account, container_name, object_name, transcription_name, locale, subscription_key, sas_token, service_sas_token):
     container_url = 'https://' + storage_account + '.blob.core.windows.net/' + container_name
 
     url = 'https://japaneast.cris.ai/api/speechtotext/v2.0/transcriptions'
@@ -54,7 +66,7 @@ def start_transcription(storage_account, container_name, object_name, transcript
         "locale": locale,
         "name": transcription_name,
         "properties": {
-            "TranscriptionResultsContainerUrl" : container_url + service_sas_url
+            "TranscriptionResultsContainerUrl" : container_url + '?' + service_sas_token
         }
     }
 
@@ -107,7 +119,6 @@ if __name__ == "__main__":
     connection_string = os.environ['AZURE_STORAGE_CONNECTION_STRING']
     container_name = os.environ['AZURE_STORAGE_CONTAINER_NAME']
     subscription_key = os.environ['AZURE_SUBSCRIPTION_KEY']
-    service_sas_url = os.environ['AZURE_SERVICE_SAS_URL']
     blob_service_client = BlobServiceClient.from_connection_string(connection_string)
 
     encoding_type = file_name[file_name.rfind('.') + 1:].lower()
@@ -117,14 +128,19 @@ if __name__ == "__main__":
     file_path = os.path.join(os.path.dirname(__file__), file_name)
     object_name = datetime.now().strftime('%Y%m%d-%H%M%S-') + file_name
 
+    get_service_sas_token(connection_string, storage_account, container_name)
+
     upload_blob(connection_string, container_name, file_path, object_name)
 
     sas_token = get_sas_token(connection_string)
+    service_sas_token = get_service_sas_token(connection_string, storage_account, container_name)
 
     transcription_name = re.sub(r'[^a-zA-Z0-9._-]', '', object_name)
     transcription_name = transcription_name.replace('.', '_')
 
-    start_transcription(storage_account, container_name, object_name, transcription_name, subscription_key, sas_token)
+    locale = 'ja-JP'
+
+    start_transcription(storage_account, container_name, object_name, transcription_name, locale, subscription_key, sas_token, service_sas_token)
 
     while True:
         status = get_transcription_status(transcription_name, subscription_key)

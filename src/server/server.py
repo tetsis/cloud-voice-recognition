@@ -274,7 +274,6 @@ class AzureUploadHandler(tornado.web.RequestHandler):
                 self.write(json_response)
                 return
 
-
         # コンテナにアップロード
         azure_speech.upload_blob(azure_connection_string, azure_container_name, file_path, file_name)
 
@@ -318,7 +317,8 @@ class AzureRecognizeHandler(tornado.web.RequestHandler):
         transcription_name = transcription_name.replace('.', '_')
 
         sas_token = azure_speech.get_sas_token(azure_connection_string)
-        azure_speech.start_transcription(azure_storage_account, azure_container_name, object_name, transcription_name, locale, azure_subscription_key, sas_token, azure_service_sas_url)
+        service_sas_token = azure_speech.get_service_sas_token(azure_connection_string, azure_storage_account, azure_container_name)
+        azure_speech.start_transcription(azure_storage_account, azure_container_name, object_name, transcription_name, locale, azure_subscription_key, sas_token, service_sas_token)
 
         json_response = json.dumps({'transcription_name': transcription_name}, ensure_ascii=False)
         self.write(json_response)
@@ -363,7 +363,6 @@ if __name__ == "__main__":
     azure_connection_string = os.environ['AZURE_STORAGE_CONNECTION_STRING']
     azure_container_name = os.environ['AZURE_STORAGE_CONTAINER_NAME']
     azure_subscription_key = os.environ['AZURE_SUBSCRIPTION_KEY']
-    azure_service_sas_url = os.environ['AZURE_SERVICE_SAS_URL']
 
     application = tornado.web.Application(
         [
