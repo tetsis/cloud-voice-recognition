@@ -90,6 +90,15 @@
           >
           </b-table>
           </div>
+
+          <div class="text-center" v-show="Object.keys(histories).length > 0">
+            <p-button type="danger"
+                      round
+                      @click.native.prevent="deleteHistory"
+                      >
+                        <span>Delete history</span>
+            </p-button>
+          </div>
         </card>
       </div>
     </div>
@@ -178,6 +187,15 @@ export default {
     }
   },
   methods: {
+    reload() {
+        this.$router.go({path: this.$router.currentRoute.path, force: true});
+    },
+    deleteHistory() {
+      if (confirm('Are you sure you want to delete the history?')) {
+        localStorage.removeItem("awsHistories");
+        this.reload();
+      }
+    },
     backToUpload() {
       this.status = 'upload';
     },
