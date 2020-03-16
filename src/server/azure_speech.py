@@ -72,9 +72,8 @@ def start_transcription(storage_account, container_name, object_name, transcript
 
     r = requests.post(url, data=json.dumps(payload), headers=headers)
     print(r)
-    pass
 
-def get_transcription_status(transcription_name, subscription_key):
+def get_transcription_id(transcription_name, subscription_key):
     url = 'https://japaneast.cris.ai/api/speechtotext/v2.0/transcriptions'
     headers = {
         'content-type': 'application/json',
@@ -83,13 +82,19 @@ def get_transcription_status(transcription_name, subscription_key):
     }
     r = requests.get(url, headers=headers)
     response = json.loads(r.text)
+    print(url)
+    print(json.dumps(response, indent=2))
 
     for res in response:
         if res['name'] == transcription_name:
-            return res['status']
+            if 'id' in res:
+                return res['id']
+            else:
+                return None
+    return None
 
-def get_transcription_result_url(transcription_name, subscription_key):
-    url = 'https://japaneast.cris.ai/api/speechtotext/v2.0/transcriptions'
+def get_transcription_status(transcription_id, subscription_key):
+    url = 'https://japaneast.cris.ai/api/speechtotext/v2.0/transcriptions/' + transcription_id
     headers = {
         'content-type': 'application/json',
         'accept': 'application/json',
@@ -97,10 +102,27 @@ def get_transcription_result_url(transcription_name, subscription_key):
     }
     r = requests.get(url, headers=headers)
     response = json.loads(r.text)
+    print(url)
+    print(json.dumps(response, indent=2))
 
-    for res in response:
-        if res['name'] == transcription_name:
-            return res['resultsUrls']['channel_0']
+    if response['id'] == transcription_id:
+        return response['status']
+    return None
+
+def get_transcription_result_url(transcription_id, subscription_key):
+    url = 'https://japaneast.cris.ai/api/speechtotext/v2.0/transcriptions/' + transcription_id
+    headers = {
+        'content-type': 'application/json',
+        'accept': 'application/json',
+        'Ocp-Apim-Subscription-Key': subscription_key,
+    }
+    r = requests.get(url, headers=headers)
+    response = json.loads(r.text)
+    print(url)
+    print(json.dumps(response, indent=2))
+
+    if response['id'] == transcription_id:
+        return response['resultsUrls']['channel_0']
 
 def get_transcript_from_file(file_name):
     json_open = open(file_name, 'r', encoding='utf-8')
@@ -141,13 +163,13 @@ if __name__ == "__main__":
     locale = 'ja-JP'
 
     start_transcription(storage_account, container_name, object_name, transcription_name, locale, subscription_key, sas_token, service_sas_token)
-
+    transcription_id = get_transcription_id(transcription_name, subscription_key)
 
     while True:
-        status = get_transcription_status(transcription_name, subscription_key)
+        status = get_transcription_status(transcription_id, subscription_key)
         print(status)
         if status == 'Succeeded':
-            result_url = get_transcription_result_url(transcription_name, subscription_key)
+            result_url = get_transcription_result_url(transcription_id, subscription_key)
             print(result_url)
             break
         time.sleep(1)
