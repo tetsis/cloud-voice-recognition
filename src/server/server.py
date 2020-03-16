@@ -8,6 +8,7 @@ from tornado.web import url, MissingArgumentError
 import json
 from datetime import datetime
 import re
+import time
 
 import aws
 import gcp
@@ -320,7 +321,13 @@ class AzureRecognizeHandler(tornado.web.RequestHandler):
         service_sas_token = azure_speech.get_service_sas_token(azure_connection_string, azure_storage_account, azure_container_name)
         azure_speech.start_transcription(azure_storage_account, azure_container_name, object_name, transcription_name, locale, azure_subscription_key, sas_token, service_sas_token)
 
-        json_response = json.dumps({'transcription_name': transcription_name}, ensure_ascii=False)
+        # Transcription ID取得
+        transcription_id = None
+        while not transcription_id:
+            transcription_id = azure_speech.get_transcription_id(transcription_name, azure_subscription_key)
+            time.sleep(1)
+
+        json_response = json.dumps({'transcription_id': transcription_id}, ensure_ascii=False)
         self.write(json_response)
 
 class AzureTextHandler(tornado.web.RequestHandler):
@@ -328,19 +335,19 @@ class AzureTextHandler(tornado.web.RequestHandler):
         self.set_header('Access-Control-Allow-Origin', '*')
 
     def get(self):
-        transcription_name = ''
+        transcription_id = ''
         try:
-            transcription_name = self.get_query_argument('transcription_name')
+            transcription_id = self.get_query_argument('transcription_id')
         except MissingArgumentError:
-            json_response = json.dumps({'message': 'Not enough argument \'transcription_name\''}, ensure_ascii=False)
+            json_response = json.dumps({'message': 'Not enough argument \'transcription_id\''}, ensure_ascii=False)
             self.set_status(400)
             self.write(json_response)
             return
         
-        status = azure_speech.get_transcription_status(transcription_name, azure_subscription_key)
+        status = azure_speech.get_transcription_status(transcription_id, azure_subscription_key)
         transcript = ''
         if status == 'Succeeded':
-            result_url = azure_speech.get_transcription_result_url(transcription_name, azure_subscription_key)
+            result_url = azure_speech.get_transcription_result_url(transcription_id, azure_subscription_key)
             download_file_name = result_url[result_url.rfind('/') + 1:]
             azure_speech.download_blob(azure_connection_string, azure_container_name, download_file_name, download_file_name)
             transcript = azure_speech.get_transcript_from_file(download_file_name)
