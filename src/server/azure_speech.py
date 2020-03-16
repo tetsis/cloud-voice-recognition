@@ -142,6 +142,7 @@ if __name__ == "__main__":
 
     start_transcription(storage_account, container_name, object_name, transcription_name, locale, subscription_key, sas_token, service_sas_token)
 
+
     while True:
         status = get_transcription_status(transcription_name, subscription_key)
         print(status)
