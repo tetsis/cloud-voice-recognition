@@ -135,7 +135,7 @@ export default {
       isUpload: false,
       status: 'upload',
       objectName: '',
-      transcriptionName: '',
+      transcriptionId: '',
     };
   },
   mounted() {
@@ -161,8 +161,8 @@ export default {
     if (localStorage.azureObjectName) {
       this.objectName = localStorage.azureObjectName;
     }
-    if (localStorage.azureTranscriptionName) {
-      this.transcriptionName = localStorage.azureTranscriptionName;
+    if (localStorage.azureTranscriptionId) {
+      this.transcriptionId = localStorage.azureTranscriptionId;
     }
   },
   watch: {
@@ -172,8 +172,8 @@ export default {
     objectName(newObjectName) {
       localStorage.azureObjectName = newObjectName;
     },
-    transcriptionName(newTranscriptionName) {
-      localStorage.azureTranscriptionName = newTranscriptionName;
+    transcriptionId(newTranscriptionId) {
+      localStorage.azureTranscriptionId = newTranscriptionId;
     }
   },
   methods: {
@@ -184,7 +184,7 @@ export default {
       let items = []
       for (let [key, value] of Object.entries(this.histories)) {
         let objectName = key;
-        let transcriptionName = value['transcriptionName'];
+        let transcriptionId = value['transcriptionId'];
         let status = value['status'];
         let language = value['language'];
         let transcript = value['transcript'];
@@ -268,11 +268,11 @@ export default {
           console.log('success');
 
           let data = response.data;
-          this.transcriptionName = data['transcription_name'];
-          this.histories[this.objectName]['transcriptionName'] = this.transcriptionName;
+          this.transcriptionId = data['transcription_id'];
+          this.histories[this.objectName]['transcriptionId'] = this.transcriptionId;
           this.saveHistories();
 
-          console.log(this.transcriptionName);
+          console.log(this.transcriptionId);
           this.notifyVue('top', 'right', 'success', 'Start recognition process')
 
           this.status = 'recognize';
@@ -290,7 +290,7 @@ export default {
       this.status = 'recognize';
       let config = {
         params: {
-            transcription_name: this.transcriptionName
+            transcription_id: this.transcriptionId
           }
       };
       axios
